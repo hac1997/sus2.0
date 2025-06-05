@@ -25,16 +25,26 @@ public class ClienteView extends JFrame {
         panel.setLayout(new GridLayout(0, 1));
 
         JButton btnPreferencial = new JButton("Preferencial");
-        btnPreferencial.addActionListener(e -> gerarSenha("A"));
+        btnPreferencial.addActionListener(e -> gerarSenha("P"));
 
         JButton btnComum = new JButton("Comum");
-        btnComum.addActionListener(e -> gerarSenha("B"));
+        btnComum.addActionListener(e -> gerarSenha("C"));
+
+        JButton btnEmergencial = new JButton("Emergencial");
+        btnEmergencial.addActionListener(e -> gerarSenha("E"));
+
+        JButton btnGrave = new JButton("Grave");
+        btnGrave.addActionListener(e -> gerarSenha("G"));
 
         filaText = new JTextArea();
         filaText.setEditable(false);
-
+        
+        panel.add(btnEmergencial);
+        panel.add(btnGrave);
         panel.add(btnPreferencial);
         panel.add(btnComum);
+
+
         panel.add(new JScrollPane(filaText));
 
         add(panel);

@@ -1,18 +1,16 @@
 package filadosus.controller;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
 
+import filadosus.esd.Fila;
 import filadosus.model.ClasseAtendimento;
 import filadosus.model.Cliente;
 import filadosus.model.Configuracao;
+import filadosus.model.ContadorClasse;
 
 public class FilaController {
-    private Map<String, Integer> contadorPorClasse = new HashMap<>();
-    private List<Cliente> fila = new ArrayList<>();
+    private Fila<ContadorClasse> contadores = new Fila<>();
+    private Fila<Cliente> fila = new Fila<>();
     private Configuracao configuracao;
 
     public FilaController(Configuracao config) {
@@ -21,32 +19,70 @@ public class FilaController {
 
     public Cliente gerarSenha(String codigoClasse) {
         ClasseAtendimento classe = configuracao.getClasse(codigoClasse);
-        int contador = contadorPorClasse.getOrDefault(codigoClasse, 0) + 1;
-        contadorPorClasse.put(codigoClasse, contador);
+        ContadorClasse contadorClasse = encontrarOuCriarContador(codigoClasse);
 
-        String senha = codigoClasse + String.format("%03d", contador);
-        Cliente cliente = new Cliente(senha, java.time.LocalDateTime.now(), classe);
-        fila.add(cliente);
+        contadorClasse.incrementar();
+        String senha = codigoClasse + String.format("%03d", contadorClasse.getContador());
+
+        Cliente cliente = new Cliente(senha, LocalDateTime.now(), classe);
+        fila.adiciona(cliente);
         return cliente;
     }
 
-    public Cliente chamarProximo() {
-        Comparator<Cliente> comparator = Comparator
-            .comparing(Cliente::excedeuTempoEspera).reversed()
-            .thenComparing(c -> c.getClasse().getPrioridade())
-            .thenComparing(Cliente::getDataEntrada);
-
-        return fila.stream()
-            .sorted(comparator)
-            .findFirst()
-            .map(cliente -> {
-                fila.remove(cliente);
-                return cliente;
-            })
-            .orElse(null);
+    private ContadorClasse encontrarOuCriarContador(String codigoClasse) {
+        for (int i = 0; i < contadores.comprimento(); i++) {
+            ContadorClasse c = contadores.get(i);
+            if (c.getCodigoClasse().equals(codigoClasse)) {
+                return c;
+            }
+        }
+        ContadorClasse novo = new ContadorClasse(codigoClasse, 0);
+        contadores.adiciona(novo);
+        return novo;
     }
 
-    public List<Cliente> getFila() {
-        return new ArrayList<>(fila);
+    public Cliente chamarProximo() {
+        if (fila.estaVazia()) return null;
+
+        int melhorIndice = -1;
+        Cliente melhorCliente = null;
+
+        for (int i = 0; i < fila.comprimento(); i++) {
+            Cliente atual = fila.get(i);
+
+            boolean excedeu = atual.excedeuTempoEspera();
+            int prioridade = atual.getClasse().getPrioridade();
+
+            if (melhorCliente == null ||
+                (excedeu && !melhorCliente.excedeuTempoEspera()) ||
+                (excedeu == melhorCliente.excedeuTempoEspera() && (
+                    prioridade < melhorCliente.getClasse().getPrioridade() ||
+                    (prioridade == melhorCliente.getClasse().getPrioridade() &&
+                     atual.getDataEntrada().isBefore(melhorCliente.getDataEntrada())))
+                )
+            ) {
+                melhorCliente = atual;
+                melhorIndice = i;
+            }
+        }
+
+        // Remover o cliente da fila recriando-a
+        if (melhorIndice >= 0) {
+            Fila<Cliente> novaFila = new Fila<>();
+            for (int i = 0; i < fila.comprimento(); i++) {
+                if (i != melhorIndice) {
+                    novaFila.adiciona(fila.get(i));
+                }
+            }
+            Cliente clienteRemovido = fila.get(melhorIndice);
+            fila = novaFila;
+            return clienteRemovido;
+        }
+
+        return null;
+    }
+
+    public Fila<Cliente> getFila() {
+        return fila;
     }
 }

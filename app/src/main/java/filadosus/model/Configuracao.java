@@ -3,15 +3,14 @@ package filadosus.model;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+
+import filadosus.esd.Fila;
 
 public class Configuracao {
-    private Map<String, ClasseAtendimento> mapaClasses;
+    private Fila<ClasseAtendimento> classes;
 
     public Configuracao(String caminhoArquivoCSV) throws IOException {
-        this.mapaClasses = new HashMap<>();
+        classes = new Fila<>();
         carregarConfiguracoes(caminhoArquivoCSV);
     }
 
@@ -19,7 +18,7 @@ public class Configuracao {
         BufferedReader reader = new BufferedReader(new FileReader(caminho));
         String linha;
 
-        // Pular cabeçalho
+        // Pula o cabeçalho
         reader.readLine();
 
         while ((linha = reader.readLine()) != null) {
@@ -31,7 +30,7 @@ public class Configuracao {
                 String descricao = partes[3].trim();
 
                 ClasseAtendimento classe = new ClasseAtendimento(codigo, prioridade, tempoMax, descricao);
-                mapaClasses.put(codigo, classe);
+                classes.adiciona(classe);
             }
         }
 
@@ -39,14 +38,25 @@ public class Configuracao {
     }
 
     public ClasseAtendimento getClasse(String codigo) {
-        return mapaClasses.get(codigo);
+        for (int i = 0; i < classes.comprimento(); i++) {
+            ClasseAtendimento c = classes.get(i);
+            if (c.getCodigo().equals(codigo)) {
+                return c;
+            }
+        }
+        return null;
     }
 
-    public Collection<ClasseAtendimento> getTodasClasses() {
-        return mapaClasses.values();
+    public Fila<ClasseAtendimento> getTodasClasses() {
+        return classes;
     }
 
     public boolean existeClasse(String codigo) {
-        return mapaClasses.containsKey(codigo);
+        for (int i = 0; i < classes.comprimento(); i++) {
+            if (classes.get(i).getCodigo().equals(codigo)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
